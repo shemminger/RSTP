@@ -1,0 +1,16 @@
+bpdu_sock.o: bpdu_sock.c bpdu_sock.h epoll_loop.h include/linux/llc.h
+bridge_config.o: bridge_config.c bridge_ctl.h bpdu_sock.h \
+  rstplib/bitmap.h rstplib/uid_stp.h rstplib/stp_bpdu.h rstplib/stp_in.h \
+  rstplib/stp_to.h log.h
+brmon.o: brmon.c include/libnetlink.h include/linux/rtnetlink.h \
+  bridge_ctl.h epoll_loop.h
+brstate.o: brstate.c include/libnetlink.h include/linux/rtnetlink.h \
+  bridge_ctl.h
+epoll_loop.o: epoll_loop.c epoll_loop.h bridge_ctl.h
+libnetlink.o: libnetlink.c include/libnetlink.h include/linux/rtnetlink.h
+ctl_socket.o: ctl_socket.c ctl_socket.h rstplib/bitmap.h \
+  rstplib/uid_stp.h rstplib/stp_bpdu.h rstplib/stp_in.h rstplib/stp_to.h \
+  ctl_socket_server.h epoll_loop.h log.h
+main.o: main.c epoll_loop.h bridge_ctl.h bpdu_sock.h ctl_socket_server.h \
+  log.h
+rstpd: bpdu_sock.o bridge_config.o brmon.o brstate.o epoll_loop.o libnetlink.o ctl_socket.o main.o
