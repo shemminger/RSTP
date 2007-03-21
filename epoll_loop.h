@@ -30,13 +30,12 @@
 #include <sys/time.h>
 #include <time.h>
 
-struct epoll_event_handler 
-{
-  int fd;
-  void *arg;
-  void (*handler)(uint32_t events, struct epoll_event_handler *p);
-  struct epoll_event *ref_ev; /* if set, epoll loop has reference to this,
-                                 so mark that ref as NULL while freeing */
+struct epoll_event_handler {
+	int fd;
+	void *arg;
+	void (*handler) (uint32_t events, struct epoll_event_handler * p);
+	struct epoll_event *ref_ev;	/* if set, epoll loop has reference to this,
+					   so mark that ref as NULL while freeing */
 };
 
 int init_epoll(void);

@@ -26,8 +26,7 @@
 #define CTL_SOCKET_CLIENT_H
 
 int send_ctl_message(int cmd, void *inbuf, int lin, void *outbuf, int *lout,
-                     int *res);
-
+		     int *res);
 
 int ctl_client_init(void);
 

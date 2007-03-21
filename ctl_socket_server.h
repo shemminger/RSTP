@@ -29,5 +29,3 @@ int ctl_socket_init(void);
 void ctl_socket_cleanup(void);
 
 #endif
-
-

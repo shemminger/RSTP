@@ -32,7 +32,7 @@ struct ifdata;
 void bpdu_send(struct epoll_event_handler *h, unsigned char *data, int len);
 
 int bpdu_sock_create(struct epoll_event_handler *h,
-                     int if_index, char *name, struct ifdata *ifdata);
+		     int if_index, char *name, struct ifdata *ifdata);
 
 void bpdu_sock_delete(struct epoll_event_handler *h);
 

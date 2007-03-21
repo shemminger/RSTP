@@ -43,27 +43,37 @@ extern int log_level;
 
 #define PRINT(_level, _fmt, _args...) Dprintf(_level, _fmt, ##_args)
 
-#define TSTM(x,y, _fmt, _args...) do if (!(x)) { PRINT(LOG_LEVEL_ERROR, "Error in %s at %s:%d verifying %s. " _fmt, __PRETTY_FUNCTION__, __FILE__, __LINE__, #x, ##_args); return y; } while (0)
+#define TSTM(x,y, _fmt, _args...)						\
+	do if (!(x)) { 								\
+			PRINT(LOG_LEVEL_ERROR,					\
+				"Error in %s at %s:%d verifying %s. " _fmt,	\
+				__PRETTY_FUNCTION__, __FILE__, __LINE__, 	\
+				#x, ##_args);					\
+			return y;						\
+       } while (0)
 
 #define TST(x,y) TSTM(x,y,"")
 
-#define LOG(_fmt, _args...) PRINT(LOG_LEVEL_DEBUG, "%s: " _fmt, __PRETTY_FUNCTION__, ##_args)
+#define LOG(_fmt, _args...) \
+	PRINT(LOG_LEVEL_DEBUG, "%s: " _fmt, __PRETTY_FUNCTION__, ##_args)
 
-#define INFO(_fmt, _args...) PRINT(LOG_LEVEL_INFO, "%s: " _fmt, __PRETTY_FUNCTION__, ##_args)
+#define INFO(_fmt, _args...) \
+	PRINT(LOG_LEVEL_INFO, "%s: " _fmt, __PRETTY_FUNCTION__, ##_args)
 
-#define ERROR(_fmt, _args...) PRINT(LOG_LEVEL_ERROR, "error, %s: " _fmt, __PRETTY_FUNCTION__, ##_args)
+#define ERROR(_fmt, _args...) \
+	PRINT(LOG_LEVEL_ERROR, "error, %s: " _fmt, __PRETTY_FUNCTION__, ##_args)
 
 static inline void dump_hex(void *b, int l)
 {
-  unsigned char *buf = b;
-  char logbuf[80];
-  int i, j;
-  for (i = 0; i < l; i += 16) {
-    for (j = 0; j < 16 && i+j < l; j++)
-      sprintf(logbuf + j * 3, " %02x", buf[i+j]);
-    PRINT(LOG_LEVEL_INFO, "%s", logbuf);
-  }
-  PRINT(LOG_LEVEL_INFO, "\n");
+	unsigned char *buf = b;
+	char logbuf[80];
+	int i, j;
+	for (i = 0; i < l; i += 16) {
+		for (j = 0; j < 16 && i + j < l; j++)
+			sprintf(logbuf + j * 3, " %02x", buf[i + j]);
+		PRINT(LOG_LEVEL_INFO, "%s", logbuf);
+	}
+	PRINT(LOG_LEVEL_INFO, "\n");
 }
 
 #endif

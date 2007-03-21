@@ -31,16 +31,14 @@
 int CTL_enable_bridge_rstp(int br_index, int enable);
 
 int CTL_get_bridge_state(int br_index,
-                         UID_STP_CFG_T *cfg, UID_STP_STATE_T *state);
+			 UID_STP_CFG_T * cfg, UID_STP_STATE_T * state);
 
-int CTL_set_bridge_config(int br_index,
-                          UID_STP_CFG_T *cfg);
+int CTL_set_bridge_config(int br_index, UID_STP_CFG_T * cfg);
 
 int CTL_get_port_state(int br_index, int port_index,
-                       UID_STP_PORT_CFG_T *cfg, UID_STP_PORT_STATE_T *state);
+		       UID_STP_PORT_CFG_T * cfg, UID_STP_PORT_STATE_T * state);
 
-int CTL_set_port_config(int br_index, int port_index,
-                        UID_STP_PORT_CFG_T *cfg);
+int CTL_set_port_config(int br_index, int port_index, UID_STP_PORT_CFG_T * cfg);
 
 int CTL_set_debug_level(int level);
 
@@ -53,9 +51,8 @@ int CTL_set_debug_level(int level);
 #define CHOOSE(a) a
 
 enum Errors {
-  Err_Dummy_Start = 1000,
-  CTL_ERRORS
-  Err_Dummy_End
+	Err_Dummy_Start = 1000,
+	CTL_ERRORS Err_Dummy_End
 };
 
 #undef CHOOSE

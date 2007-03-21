@@ -30,12 +30,11 @@
 
 #include "ctl_functions.h"
 
-struct ctl_msg_hdr
-{
-  int cmd;
-  int lin;
-  int lout;
-  int res;
+struct ctl_msg_hdr {
+	int cmd;
+	int lin;
+	int lout;
+	int res;
 };
 
 #define set_socket_address(sa, string) \
@@ -54,8 +53,12 @@ int CTL_enable_bridge_rstp(int br_index, int enable);
 #endif
 #define CMD_CODE_enable_bridge_rstp  101
 #define enable_bridge_rstp_ARGS (int br_index, int enable)
-struct enable_bridge_rstp_IN  { int br_index; int enable; };
-struct enable_bridge_rstp_OUT { };
+struct enable_bridge_rstp_IN {
+	int br_index;
+	int enable;
+};
+struct enable_bridge_rstp_OUT {
+};
 #define enable_bridge_rstp_COPY_IN \
   ({ in->br_index = br_index; in->enable = enable; })
 #define enable_bridge_rstp_COPY_OUT ({ (void)0; })
@@ -63,25 +66,33 @@ struct enable_bridge_rstp_OUT { };
 
 #if 0
 int CTL_get_bridge_state(int br_index,
-                         UID_STP_CFG_T *cfg, UID_STP_STATE_T *state);
+			 UID_STP_CFG_T * cfg, UID_STP_STATE_T * state);
 #endif
 #define CMD_CODE_get_bridge_state  102
 #define get_bridge_state_ARGS (int br_index, UID_STP_CFG_T *cfg, UID_STP_STATE_T *state)
-struct get_bridge_state_IN  { int br_index; };
-struct get_bridge_state_OUT { UID_STP_CFG_T cfg; UID_STP_STATE_T state; };
+struct get_bridge_state_IN {
+	int br_index;
+};
+struct get_bridge_state_OUT {
+	UID_STP_CFG_T cfg;
+	UID_STP_STATE_T state;
+};
 #define get_bridge_state_COPY_IN \
   ({ in->br_index = br_index; })
 #define get_bridge_state_COPY_OUT ({ *cfg = out->cfg; *state = out->state; })
 #define get_bridge_state_CALL (in->br_index, &out->cfg, &out->state)
 
 #if 0
-int CTL_set_bridge_config(int br_index,
-                          UID_STP_CFG_T *cfg);
+int CTL_set_bridge_config(int br_index, UID_STP_CFG_T * cfg);
 #endif
 #define CMD_CODE_set_bridge_config  103
 #define set_bridge_config_ARGS (int br_index, UID_STP_CFG_T *cfg)
-struct set_bridge_config_IN  { int br_index; UID_STP_CFG_T cfg; };
-struct set_bridge_config_OUT { };
+struct set_bridge_config_IN {
+	int br_index;
+	UID_STP_CFG_T cfg;
+};
+struct set_bridge_config_OUT {
+};
 #define set_bridge_config_COPY_IN \
   ({ in->br_index = br_index; in->cfg = *cfg; })
 #define set_bridge_config_COPY_OUT ({ (void)0; })
@@ -89,38 +100,50 @@ struct set_bridge_config_OUT { };
 
 #if 0
 int CTL_get_port_state(int br_index, int port_index,
-                       UID_STP_PORT_CFG_T *cfg, UID_STP_PORT_STATE_T *state);
+		       UID_STP_PORT_CFG_T * cfg, UID_STP_PORT_STATE_T * state);
 #endif
 #define CMD_CODE_get_port_state  104
 #define get_port_state_ARGS (int br_index, int port_index, UID_STP_PORT_CFG_T *cfg, UID_STP_PORT_STATE_T *state)
-struct get_port_state_IN  { int br_index; int port_index; };
-struct get_port_state_OUT { UID_STP_PORT_CFG_T cfg; UID_STP_PORT_STATE_T state; };
+struct get_port_state_IN {
+	int br_index;
+	int port_index;
+};
+struct get_port_state_OUT {
+	UID_STP_PORT_CFG_T cfg;
+	UID_STP_PORT_STATE_T state;
+};
 #define get_port_state_COPY_IN \
   ({ in->br_index = br_index; in->port_index = port_index; })
 #define get_port_state_COPY_OUT ({ *cfg = out->cfg; *state = out->state; })
 #define get_port_state_CALL (in->br_index, in->port_index, &out->cfg, &out->state)
 
 #if 0
-int CTL_set_port_config(int br_index, int port_index,
-                        UID_STP_PORT_CFG_T *cfg);
+int CTL_set_port_config(int br_index, int port_index, UID_STP_PORT_CFG_T * cfg);
 #endif
 #define CMD_CODE_set_port_config  105
 #define set_port_config_ARGS (int br_index, int port_index, UID_STP_PORT_CFG_T *cfg)
-struct set_port_config_IN  { int br_index; int port_index; UID_STP_PORT_CFG_T cfg; };
-struct set_port_config_OUT { };
+struct set_port_config_IN {
+	int br_index;
+	int port_index;
+	UID_STP_PORT_CFG_T cfg;
+};
+struct set_port_config_OUT {
+};
 #define set_port_config_COPY_IN \
   ({ in->br_index = br_index; in->port_index = port_index; in->cfg = *cfg; })
 #define set_port_config_COPY_OUT ({ (void)0; })
 #define set_port_config_CALL (in->br_index, in->port_index, &in->cfg)
-
 
 #if 0
 int CTL_set_debug_level(int level);
 #endif
 #define CMD_CODE_set_debug_level 106
 #define set_debug_level_ARGS (int level)
-struct set_debug_level_IN  { int level; };
-struct set_debug_level_OUT { };
+struct set_debug_level_IN {
+	int level;
+};
+struct set_debug_level_OUT {
+};
 #define set_debug_level_COPY_IN \
   ({ in->level = level; })
 #define set_debug_level_COPY_OUT ({ (void)0; })
@@ -161,7 +184,5 @@ int CTL_ ## name name ## _ARGS \
   name ## _COPY_OUT; \
   return r; \
 }
-
-
 
 #endif

@@ -39,8 +39,8 @@ static int portstate(const char *name)
 {
 	int i;
 
-	for (i = 0; i < sizeof(port_states)/sizeof(port_states[0]); i++) {
-		if (strcasecmp(name,  port_states[i]) == 0)
+	for (i = 0; i < sizeof(port_states) / sizeof(port_states[0]); i++) {
+		if (strcasecmp(name, port_states[i]) == 0)
 			return i;
 	}
 	return -1;
@@ -50,43 +50,43 @@ static int portstate(const char *name)
 static int br_set_state(struct rtnl_handle *rth, unsigned ifindex, __u8 state)
 {
 	struct {
-		struct nlmsghdr 	n;
-		struct ifinfomsg 	ifi;
-		char   			buf[256];
+		struct nlmsghdr n;
+		struct ifinfomsg ifi;
+		char buf[256];
 	} req;
 
 	memset(&req, 0, sizeof(req));
 
 	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
-	req.n.nlmsg_flags = NLM_F_REQUEST|NLM_F_REPLACE;
+	req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_REPLACE;
 	req.n.nlmsg_type = RTM_SETLINK;
 	req.ifi.ifi_family = AF_BRIDGE;
 	req.ifi.ifi_index = ifindex;
 
 	addattr32(&req.n, sizeof(req.buf), IFLA_PROTINFO, state);
-	
+
 	return rtnl_talk(rth, &req.n, 0, 0, NULL, NULL, NULL);
 }
 
 static int br_send_bpdu(struct rtnl_handle *rth, unsigned ifindex,
-                        const unsigned char *data, int len)
+			const unsigned char *data, int len)
 {
 	struct {
-		struct nlmsghdr 	n;
-		struct ifinfomsg 	ifi;
-		char   			buf[256];
+		struct nlmsghdr n;
+		struct ifinfomsg ifi;
+		char buf[256];
 	} req;
 
 	memset(&req, 0, sizeof(req));
 
 	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
-	req.n.nlmsg_flags = NLM_F_REQUEST|NLM_F_REPLACE;
+	req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_REPLACE;
 	req.n.nlmsg_type = RTM_SETLINK;
 	req.ifi.ifi_family = AF_BRIDGE;
 	req.ifi.ifi_index = ifindex;
 
 	addattr_l(&req.n, sizeof(req.buf), IFLA_PRIORITY, data, len);
-	
+
 	return rtnl_talk(rth, &req.n, 0, 0, NULL, NULL, NULL);
 }
 
@@ -97,10 +97,8 @@ int main(int argc, char **argv)
 	int err, brstate;
 	struct rtnl_handle rth;
 
-
 	if (argc != 3) {
-		fprintf(stderr,
-			"Usage: brstate ifname state\n");
+		fprintf(stderr, "Usage: brstate ifname state\n");
 		exit(-1);
 	}
 
@@ -114,18 +112,17 @@ int main(int argc, char **argv)
 		fprintf(stderr, "brstate: unknown interface '%s'\n", argv[1]);
 		exit(1);
 	}
-	
+
 	brstate = portstate(argv[2]);
 	if (brstate < 0) {
-		fprintf(stderr, "brstate: unknown port state '%s'\n",
-			argv[2]);
+		fprintf(stderr, "brstate: unknown port state '%s'\n", argv[2]);
 		exit(1);
 	}
 
 	err = br_set_state(&rth, ifindex, brstate);
 	if (err) {
 		fprintf(stderr, "brstate: set  %d, %d failed %d\n",
-			 ifindex, brstate, err);
+			ifindex, brstate, err);
 		exit(1);
 	}
 
@@ -140,21 +137,22 @@ extern struct rtnl_handle rth_state;
 
 int bridge_set_state(int ifindex, int brstate)
 {
-  int err = br_set_state(&rth_state, ifindex, brstate);
-  if (err < 0) {
-    fprintf(stderr, "Couldn't set bridge state, ifindex %d, state %d\n",
-            ifindex, brstate);
-    return -1;
-  }
-  return 0;
+	int err = br_set_state(&rth_state, ifindex, brstate);
+	if (err < 0) {
+		fprintf(stderr,
+			"Couldn't set bridge state, ifindex %d, state %d\n",
+			ifindex, brstate);
+		return -1;
+	}
+	return 0;
 }
 
 int bridge_send_bpdu(int ifindex, const unsigned char *data, int len)
 {
-  int err = br_send_bpdu(&rth_state, ifindex, data, len);
-  if (err < 0) {
-    fprintf(stderr, "Couldn't send bpdu, ifindex %d\n", ifindex);
-    return -1;
-  }
-  return 0;
+	int err = br_send_bpdu(&rth_state, ifindex, data, len);
+	if (err < 0) {
+		fprintf(stderr, "Couldn't send bpdu, ifindex %d\n", ifindex);
+		return -1;
+	}
+	return 0;
 }

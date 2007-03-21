@@ -40,39 +40,41 @@ int log_level = LOG_LEVEL_DEFAULT;
 
 int main(int argc, char *argv[])
 {
-  int c;
-  while ((c = getopt(argc, argv, "dv:")) != -1) {
-    switch (c) {
-    case 'd':
-      become_daemon = 0; break;
-    case 'v':
-      {
-        char *end;
-        long l;
-        l = strtoul(optarg, &end, 0);
-        if (*optarg == 0 || *end != 0 || l > LOG_LEVEL_MAX) {
-          ERROR("Invalid loglevel %s", optarg);
-          exit(1);
-        }
-        log_level = l;
-      }
-      break;
-    default:
-      return -1;
-    }
-  }
-  
-  TST(init_epoll() == 0, -1);
-  TST(ctl_socket_init() == 0, -1);
+	int c;
+	while ((c = getopt(argc, argv, "dv:")) != -1) {
+		switch (c) {
+		case 'd':
+			become_daemon = 0;
+			break;
+		case 'v':
+			{
+				char *end;
+				long l;
+				l = strtoul(optarg, &end, 0);
+				if (*optarg == 0 || *end != 0
+				    || l > LOG_LEVEL_MAX) {
+					ERROR("Invalid loglevel %s", optarg);
+					exit(1);
+				}
+				log_level = l;
+			}
+			break;
+		default:
+			return -1;
+		}
+	}
 
-  TST(netsock_init() == 0, -1);
-  TST(init_bridge_ops() == 0, -1);
-  if (become_daemon) {
-    openlog("rstpd", 0, LOG_DAEMON);
-    daemon(0,0);
-    is_daemon = 1;
-  }
-  return epoll_main_loop();
+	TST(init_epoll() == 0, -1);
+	TST(ctl_socket_init() == 0, -1);
+
+	TST(netsock_init() == 0, -1);
+	TST(init_bridge_ops() == 0, -1);
+	if (become_daemon) {
+		openlog("rstpd", 0, LOG_DAEMON);
+		daemon(0, 0);
+		is_daemon = 1;
+	}
+	return epoll_main_loop();
 }
 
 /*********************** Logging *********************/
@@ -80,31 +82,32 @@ int main(int argc, char *argv[])
 #include <stdarg.h>
 #include <time.h>
 
-void vDprintf(int level, const char* fmt, va_list ap)
+void vDprintf(int level, const char *fmt, va_list ap)
 {
-  if (level > log_level)
-    return;
-  
-  if (!is_daemon) {
-    char logbuf[256];
-    logbuf[255] = 0;
-    time_t      clock;
-    struct      tm *local_tm;
-    time(&clock);
-    local_tm = localtime (&clock);
-    int l = strftime(logbuf, sizeof(logbuf)-1, "%F %T ", local_tm);
-    vsnprintf(logbuf + l, sizeof(logbuf) - l - 1, fmt, ap);
-    printf("%s\n", logbuf);
-  }
-  else {
-    vsyslog((level <= LOG_LEVEL_INFO) ? LOG_INFO : LOG_DEBUG, fmt, ap);
-  }
+	if (level > log_level)
+		return;
+
+	if (!is_daemon) {
+		char logbuf[256];
+		logbuf[255] = 0;
+		time_t clock;
+		struct tm *local_tm;
+		time(&clock);
+		local_tm = localtime(&clock);
+		int l =
+		    strftime(logbuf, sizeof(logbuf) - 1, "%F %T ", local_tm);
+		vsnprintf(logbuf + l, sizeof(logbuf) - l - 1, fmt, ap);
+		printf("%s\n", logbuf);
+	} else {
+		vsyslog((level <= LOG_LEVEL_INFO) ? LOG_INFO : LOG_DEBUG, fmt,
+			ap);
+	}
 }
 
-void Dprintf(int level, const char *fmt, ...) 
+void Dprintf(int level, const char *fmt, ...)
 {
-    va_list ap;
-    va_start(ap, fmt);
-    vDprintf(level, fmt, ap);
-    va_end(ap);
+	va_list ap;
+	va_start(ap, fmt);
+	vDprintf(level, fmt, ap);
+	va_end(ap);
 }
