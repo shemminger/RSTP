@@ -357,9 +357,9 @@ static int do_showport(int br_index, const char *port_name,
 
 static int not_dot_dotdot(const struct dirent *entry)
 {
-  char *n = entry->d_name;
-  return
-    !(n[0] == '.' && (n[1] == 0 || (n[1] == '.' && n[2] == 0)));
+  const char *n = entry->d_name;
+
+  return !(n[0] == '.' && (n[1] == 0 || (n[1] == '.' && n[2] == 0)));
 }
 
 static int cmd_showport(int argc, char *const* argv)
