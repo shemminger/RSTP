@@ -1,5 +1,6 @@
 
-DSOURCES = brmon.c brstate.c libnetlink.c epoll_loop.c bridge_track.c ctl_socket.c netif_utils.c main.c
+DSOURCES = brmon.c brstate.c libnetlink.c epoll_loop.c bridge_track.c \
+	   packet.c ctl_socket.c netif_utils.c main.c
 
 DOBJECTS = $(DSOURCES:.c=.o)
 

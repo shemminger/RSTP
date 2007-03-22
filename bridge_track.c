@@ -24,9 +24,11 @@
 
 #include "bridge_ctl.h"
 #include "netif_utils.h"
+#include "packet.h"
 
 #include <unistd.h>
 #include <net/if.h>
+#include <stdlib.h>
 #include <linux/if_bridge.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
@@ -80,6 +82,8 @@ struct ifdata {
 	ADMIN_P2P_T admin_point2point;
 	unsigned char admin_edge;
 	unsigned char admin_non_stp;	/* 1- doesn't participate in STP, 1 - regular */
+
+	struct epoll_event_handler event;
 };
 
 /* Instances */
@@ -162,8 +166,6 @@ void update_port_stp_config(struct ifdata *ifc, UID_STP_PORT_CFG_T * cfg)
 
 int add_port_stp(struct ifdata *ifc)
 {				/* Bridge is ifc->master */
-	char name[IFNAMSIZ];
-	TST(if_indextoname(ifc->if_index, name) != 0, -1);
 	TST((ifc->port_index = get_bridge_portno(ifc->name)) >= 0, -1);
 
 	/* Add port to STP */
@@ -311,11 +313,15 @@ struct ifdata *create_if(int if_index, struct ifdata *br)
 	struct ifdata *p;
 	TST((p = malloc(sizeof(*p))) != NULL, NULL);
 
+	memset(p, 0, sizeof(*p));
+
 	/* Init fields */
 	p->if_index = if_index;
 	p->is_bridge = (br == NULL);
-	memset(p->name, 0, sizeof(p->name));
+
+	/* TODO: purge use of name, due to issue with renameing */
 	if_indextoname(if_index, p->name);
+
 	if (p->is_bridge) {
 		INFO("Add bridge %s", p->name);
 		/* Init slave list */
@@ -333,12 +339,20 @@ struct ifdata *create_if(int if_index, struct ifdata *br)
 		p->speed = 0;
 		p->duplex = 0;
 		p->master = br;
+
+		if (packet_sock_create(&p->event, p->if_index, p)) {
+			free(p);
+			return NULL;
+		}
+
 		update_port_stp_config(p, &default_port_stp_cfg);
 		ADD_TO_LIST(br->port_list, port_next, p);	/* Add to bridge port list */
+
 		if (br->stp_up) {
 			add_port_stp(p);
 		}
 	}
+
 	/* Add to interface list */
 	ADD_TO_LIST(if_head, next, p);
 
@@ -365,11 +379,14 @@ void delete_if(struct ifdata *ifc)
 		REMOVE_FROM_LIST(ifc->master->port_list, port_next, ifc,
 				 "Can't find interface ifindex %d on br %d's port list",
 				 ifc->if_index, ifc->master->if_index);
+		packet_sock_delete(&ifc->event);
 	}
+
 	/* Remove from bridge interface list */
 	REMOVE_FROM_LIST(if_head, next, ifc,
 			 "Can't find interface ifindex %d on iflist",
 			 ifc->if_index);
+	free(ifc);
 }
 
 void set_br_up(struct ifdata *br, int up)
@@ -531,17 +548,17 @@ int bridge_notify(int br_index, int if_index, int newlink, int up)
 	return 0;
 }
 
-void bridge_bpdu_rcv(int if_index, const unsigned char *data, int len)
+void bridge_bpdu_rcv(struct ifdata *ifc, const unsigned char *data, int len)
 {
-	LOG("ifindex %d, len %d", if_index, len);
-	struct ifdata *ifc = find_if(if_index);
 	TST(ifc && !ifc->is_bridge,);
 	TST(ifc->up && ifc->master->stp_up,);
 	BPDU_T bpdu;
+
 	memset(&bpdu.eth, 0, sizeof(bpdu.eth));
 	if (len > sizeof(bpdu) - sizeof(bpdu.eth))
 		len = sizeof(bpdu) - sizeof(bpdu.eth);
 	memcpy(&bpdu.hdr, data, len);
+
 	/* Do some validation */
 	TST(len >= 4,);
 	TST(bpdu.hdr.protocol[0] == 0 && bpdu.hdr.protocol[1] == 0,);

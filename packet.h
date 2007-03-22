@@ -22,21 +22,17 @@
 
 ******************************************************************************/
 
-#ifndef BPDU_SOCK_H
-#define BPDU_SOCK_H
+#ifndef PACKET_SOCK_H
+#define PACKET_SOCK_H
 
 #include "epoll_loop.h"
 
 struct ifdata;
 
-void bpdu_send(struct epoll_event_handler *h, unsigned char *data, int len);
+void packet_send(struct epoll_event_handler *h, unsigned char *data, int len);
 
-int bpdu_sock_create(struct epoll_event_handler *h,
-		     int if_index, char *name, struct ifdata *ifdata);
+int packet_sock_create(struct epoll_event_handler *h,
+		       int if_index, struct ifdata *ifdata);
 
-void bpdu_sock_delete(struct epoll_event_handler *h);
-
-/* Externally provided, we call it */
-void bpdu_rcv(struct ifdata *ifdata, unsigned char *data, int len);
-
+void packet_sock_delete(struct epoll_event_handler *h);
 #endif

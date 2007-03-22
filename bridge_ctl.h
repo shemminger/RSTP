@@ -25,6 +25,8 @@
 #ifndef BRIDGE_CTL_H
 #define BRIDGE_CTL_H
 
+struct ifdata;
+
 int init_bridge_ops(void);
 
 void bridge_get_configuration(void);
@@ -35,7 +37,7 @@ int bridge_send_bpdu(int ifindex, const unsigned char *data, int len);
 
 int bridge_notify(int br_index, int if_index, int newlink, int up);
 
-void bridge_bpdu_rcv(int if_index, const unsigned char *data, int len);
+void bridge_bpdu_rcv(struct ifdata *, const unsigned char *data, int len);
 
 void bridge_one_second(void);
 
