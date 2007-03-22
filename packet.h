@@ -28,6 +28,7 @@
 #include "epoll_loop.h"
 
 void packet_send(int ifindex, const unsigned char *data, int len);
+
 int packet_sock_init(void);
 
 #endif

@@ -26,6 +26,7 @@
 #include "bridge_ctl.h"
 #include "ctl_socket_server.h"
 #include "netif_utils.h"
+#include "packet.h"
 #include "log.h"
 
 #include <stdio.h>
@@ -66,7 +67,7 @@ int main(int argc, char *argv[])
 
 	TST(init_epoll() == 0, -1);
 	TST(ctl_socket_init() == 0, -1);
-
+	TST(packet_sock_init() == 0, -1);
 	TST(netsock_init() == 0, -1);
 	TST(init_bridge_ops() == 0, -1);
 	if (become_daemon) {
