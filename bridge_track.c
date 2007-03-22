@@ -340,11 +340,6 @@ struct ifdata *create_if(int if_index, struct ifdata *br)
 		p->duplex = 0;
 		p->master = br;
 
-		if (packet_sock_create(&p->event, p->if_index, p)) {
-			free(p);
-			return NULL;
-		}
-
 		update_port_stp_config(p, &default_port_stp_cfg);
 		ADD_TO_LIST(br->port_list, port_next, p);	/* Add to bridge port list */
 
@@ -379,7 +374,6 @@ void delete_if(struct ifdata *ifc)
 		REMOVE_FROM_LIST(ifc->master->port_list, port_next, ifc,
 				 "Can't find interface ifindex %d on br %d's port list",
 				 ifc->if_index, ifc->master->if_index);
-		packet_sock_delete(&ifc->event);
 	}
 
 	/* Remove from bridge interface list */
@@ -548,11 +542,16 @@ int bridge_notify(int br_index, int if_index, int newlink, int up)
 	return 0;
 }
 
-void bridge_bpdu_rcv(struct ifdata *ifc, const unsigned char *data, int len)
+void bridge_bpdu_rcv(int if_index, const unsigned char *data, int len)
 {
-	TST(ifc && !ifc->is_bridge,);
-	TST(ifc->up && ifc->master->stp_up,);
+	struct ifdata *ifc = find_if(if_index);
 	BPDU_T bpdu;
+
+	LOG("ifindex %d, len %d", if_index, len);
+	if (!ifc)
+		return;
+
+	TST(ifc->up && ifc->master->stp_up,);
 
 	memset(&bpdu.eth, 0, sizeof(bpdu.eth));
 	if (len > sizeof(bpdu) - sizeof(bpdu.eth))
@@ -740,7 +739,9 @@ STP_OUT_tx_bpdu(IN int port_index, IN int vlan_id,
 	TST(vlan_id == 0, 0);
 	//  dump_hex(bpdu + sizeof(MAC_HEADER_T) + sizeof(ETH_HEADER_T),
 	//           bpdu_len - (sizeof(MAC_HEADER_T) + sizeof(ETH_HEADER_T)));
-	bridge_send_bpdu(port->if_index, bpdu + sizeof(MAC_HEADER_T) + sizeof(ETH_HEADER_T), bpdu_len);	// The length we get excludes headers!
+	packet_send(port->if_index, 
+		    bpdu + sizeof(MAC_HEADER_T) + sizeof(ETH_HEADER_T),
+		    bpdu_len);	// The length we get excludes headers!
 	return 0;
 }
 

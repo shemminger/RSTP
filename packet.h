@@ -27,12 +27,7 @@
 
 #include "epoll_loop.h"
 
-struct ifdata;
+void packet_send(int ifindex, const unsigned char *data, int len);
+int packet_sock_init(void);
 
-void packet_send(struct epoll_event_handler *h, unsigned char *data, int len);
-
-int packet_sock_create(struct epoll_event_handler *h,
-		       int if_index, struct ifdata *ifdata);
-
-void packet_sock_delete(struct epoll_event_handler *h);
 #endif

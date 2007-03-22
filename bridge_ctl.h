@@ -33,11 +33,9 @@ void bridge_get_configuration(void);
 
 int bridge_set_state(int ifindex, int state);
 
-int bridge_send_bpdu(int ifindex, const unsigned char *data, int len);
-
 int bridge_notify(int br_index, int if_index, int newlink, int up);
 
-void bridge_bpdu_rcv(struct ifdata *, const unsigned char *data, int len);
+void bridge_bpdu_rcv(int ifindex, const unsigned char *data, int len);
 
 void bridge_one_second(void);
 

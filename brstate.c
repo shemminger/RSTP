@@ -47,28 +47,6 @@ static int br_set_state(struct rtnl_handle *rth, unsigned ifindex, __u8 state)
 	return rtnl_talk(rth, &req.n, 0, 0, NULL, NULL, NULL);
 }
 
-static int br_send_bpdu(struct rtnl_handle *rth, unsigned ifindex,
-			const unsigned char *data, int len)
-{
-	struct {
-		struct nlmsghdr n;
-		struct ifinfomsg ifi;
-		char buf[256];
-	} req;
-
-	memset(&req, 0, sizeof(req));
-
-	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
-	req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_REPLACE;
-	req.n.nlmsg_type = RTM_SETLINK;
-	req.ifi.ifi_family = AF_BRIDGE;
-	req.ifi.ifi_index = ifindex;
-
-	addattr_l(&req.n, sizeof(req.buf), IFLA_PRIORITY, data, len);
-
-	return rtnl_talk(rth, &req.n, 0, 0, NULL, NULL, NULL);
-}
-
 #include "bridge_ctl.h"
 
 extern struct rtnl_handle rth_state;
@@ -80,16 +58,6 @@ int bridge_set_state(int ifindex, int brstate)
 		fprintf(stderr,
 			"Couldn't set bridge state, ifindex %d, state %d\n",
 			ifindex, brstate);
-		return -1;
-	}
-	return 0;
-}
-
-int bridge_send_bpdu(int ifindex, const unsigned char *data, int len)
-{
-	int err = br_send_bpdu(&rth_state, ifindex, data, len);
-	if (err < 0) {
-		fprintf(stderr, "Couldn't send bpdu, ifindex %d\n", ifindex);
 		return -1;
 	}
 	return 0;

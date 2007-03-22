@@ -46,44 +46,11 @@
 
 #include "log.h"
 
-#define DEBUG 1
+static struct epoll_event_handler packet_event;
 
-/*
- * To send/receive Spanning Tree packets we use PF_PACKET because
- * it allows the filtering we want but gives raw data
- */
-void packet_send(struct epoll_event_handler *h, unsigned char *data, int len)
+#ifdef STP_DBG
+static void dump_packet(const unsigned char *buf, int cc)
 {
-	int l;
-
-	if (fcntl(h->fd, F_SETFL, 0) < 0)
-		ERROR("Error unsetting O_NONBLOCK: %m");
-
-	l = send(h->fd, data, len, 0);
-	if (l < 0)
-		ERROR("send failed: %m");
-	else if (l != len)
-		ERROR("short write in sendto: %d instead of %d", l, len);
-
-	if (fcntl(h->fd, F_SETFL, O_NONBLOCK) < 0)
-		ERROR("Error setting O_NONBLOCK: %m");
-}
-
-void packet_rcv_handler(uint32_t events, struct epoll_event_handler *h)
-{
-	int cc;
-	unsigned char buf[2048];
-
-	cc = recv(h->fd, &buf, sizeof(buf), 0);
-	if (cc <= 0) {
-		ERROR("read failed: %m");
-		return;
-	}
-
-#ifdef DEBUG
-	printf("Src %02x:%02x:%02x:%02x:%02x:%02x\n",
-	       buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
-
 	int i, j;
 	for (i = 0; i < cc; i += 16) {
 		for (j = 0; j < 16 && i + j < cc; j++)
@@ -92,9 +59,63 @@ void packet_rcv_handler(uint32_t events, struct epoll_event_handler *h)
 	}
 	printf("\n");
 	fflush(stdout);
+}
 #endif
 
-	bridge_bpdu_rcv(h->arg, buf, cc);
+/*
+ * To send/receive Spanning Tree packets we use PF_PACKET because
+ * it allows the filtering we want but gives raw data
+ */
+void packet_send(int ifindex, const unsigned char *data, int len)
+{
+	int l;
+	struct sockaddr_ll sl = {
+		.sll_family = AF_PACKET,
+		.sll_protocol = htons(ETH_P_802_2),
+		.sll_ifindex = ifindex,
+		.sll_halen = ETH_ALEN,
+	};
+
+	memcpy(sl.sll_addr, data, ETH_ALEN);
+
+#ifdef STP_DBG
+	printf("Send to %02x:%02x:%02x:%02x:%02x:%02x\n",
+	       sl.sll_addr[0], sl.sll_addr[1], sl.sll_addr[2],
+	       sl.sll_addr[3], sl.sll_addr[4], sl.sll_addr[5]);
+	dump_packet(data, len);
+#endif
+	l = sendto(packet_event.fd, data, len, 0, 
+		   (struct sockaddr *) &sl, sizeof(sl));
+
+	if (l < 0) {
+		if (errno != EWOULDBLOCK)
+			ERROR("send failed: %m");
+	} else if (l != len)
+		ERROR("short write in sendto: %d instead of %d", l, len);
+}
+
+static void packet_rcv(uint32_t events, struct epoll_event_handler *h)
+{
+	int cc;
+	unsigned char buf[2048];
+	struct sockaddr_ll sl;
+	socklen_t salen = sizeof sl;
+
+	cc = recvfrom(h->fd, &buf, sizeof(buf), 0,
+		      (struct sockaddr *) &sl, &salen);
+	if (cc <= 0) {
+		ERROR("recvfrom failed: %m");
+		return;
+	}
+
+#ifdef STP_DBG
+	printf("Receive Src %02x:%02x:%02x:%02x:%02x:%02x\n",
+	       buf[6], buf[7], buf[8], buf[9], buf[10], buf[11]);
+
+	dump_packet(buf, cc);
+#endif
+
+	bridge_bpdu_rcv(sl.sll_ifindex, buf, cc);
 }
 
 /* Berkeley Packet filter code to filter out spanning tree packets.
@@ -110,52 +131,40 @@ static struct sock_filter stp_filter[] = {
 };
 
 /*
- * Open up a raw packet socket to catch all 802.2 packets on a device
+ * Open up a raw packet socket to catch all 802.2 packets.
  * and install a packet filter to only see STP (SAP 42)
+ *
+ * Since any bridged devices are already in promiscious mode
+ * no need to add multicast address.
  */
-int packet_sock_create(struct epoll_event_handler *h, int if_index,
-		       struct ifdata *arg)
+int packet_sock_init(void)
 {
 	int s;
-	struct sockaddr_ll sll = { 
-		.sll_family = AF_PACKET,
-		.sll_ifindex = if_index,
-	};
 	struct sock_fprog prog = {
 		.len = sizeof(stp_filter) / sizeof(stp_filter[0]),
 		.filter = stp_filter,
 	};
 
-	s = socket(PF_PACKET, SOCK_PACKET, htons(ETH_P_802_2));
+	s = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_802_2));
 	if (s < 0) {
 		ERROR("socket failed: %m");
 		return -1;
 	}
 
-	if (bind(s, (struct sockaddr *) &sll, sizeof(sll)) < 0)
-		ERROR("bind failed: %m");
-	
-	else if (setsockopt(s, SOL_SOCKET, SO_ATTACH_FILTER, &prog, sizeof(prog)) < 0) 
+	if (setsockopt(s, SOL_SOCKET, SO_ATTACH_FILTER, &prog, sizeof(prog)) < 0) 
 		ERROR("setsockopt packet filter failed: %m");
 
 	else if (fcntl(s, F_SETFL, O_NONBLOCK) < 0)
 		ERROR("fcntl set nonblock failed: %m");
 
 	else {
-		h->fd = s;
-		h->arg = arg;
-		h->handler = packet_rcv_handler;
+		packet_event.fd = s;
+		packet_event.handler = packet_rcv;
 
-		if (add_epoll(h) == 0)
+		if (add_epoll(&packet_event) == 0)
 			return 0;
 	}
 
 	close(s);
 	return -1;
-}
-
-void packet_sock_delete(struct epoll_event_handler *h)
-{
-	remove_epoll(h);
-	close(h->fd);
 }
