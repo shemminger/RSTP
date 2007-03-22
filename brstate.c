@@ -26,27 +26,6 @@
 
 #include "libnetlink.h"
 
-#if 0
-static const char *port_states[] = {
-	[BR_STATE_DISABLED] = "disabled",
-	[BR_STATE_LISTENING] = "listening",
-	[BR_STATE_LEARNING] = "learning",
-	[BR_STATE_FORWARDING] = "forwarding",
-	[BR_STATE_BLOCKING] = "blocking",
-};
-
-static int portstate(const char *name)
-{
-	int i;
-
-	for (i = 0; i < sizeof(port_states) / sizeof(port_states[0]); i++) {
-		if (strcasecmp(name, port_states[i]) == 0)
-			return i;
-	}
-	return -1;
-}
-#endif
-
 static int br_set_state(struct rtnl_handle *rth, unsigned ifindex, __u8 state)
 {
 	struct {
@@ -89,47 +68,6 @@ static int br_send_bpdu(struct rtnl_handle *rth, unsigned ifindex,
 
 	return rtnl_talk(rth, &req.n, 0, 0, NULL, NULL, NULL);
 }
-
-#if 0
-int main(int argc, char **argv)
-{
-	unsigned int ifindex;
-	int err, brstate;
-	struct rtnl_handle rth;
-
-	if (argc != 3) {
-		fprintf(stderr, "Usage: brstate ifname state\n");
-		exit(-1);
-	}
-
-	if (rtnl_open(&rth, 0) < 0) {
-		fprintf(stderr, "brstate: can't setup netlink\n");
-		exit(1);
-	}
-
-	ifindex = if_nametoindex(argv[1]);
-	if (ifindex == 0) {
-		fprintf(stderr, "brstate: unknown interface '%s'\n", argv[1]);
-		exit(1);
-	}
-
-	brstate = portstate(argv[2]);
-	if (brstate < 0) {
-		fprintf(stderr, "brstate: unknown port state '%s'\n", argv[2]);
-		exit(1);
-	}
-
-	err = br_set_state(&rth, ifindex, brstate);
-	if (err) {
-		fprintf(stderr, "brstate: set  %d, %d failed %d\n",
-			ifindex, brstate, err);
-		exit(1);
-	}
-
-	rtnl_close(&rth);
-	return 0;
-}
-#endif
 
 #include "bridge_ctl.h"
 
