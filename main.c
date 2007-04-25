@@ -34,6 +34,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <syslog.h>
+#include <errno.h>
 
 static int become_daemon = 1;
 static int is_daemon = 0;
@@ -71,9 +72,16 @@ int main(int argc, char *argv[])
 	TST(netsock_init() == 0, -1);
 	TST(init_bridge_ops() == 0, -1);
 	if (become_daemon) {
+		FILE *f = fopen("/var/run/rstpd.pid", "w");
+		if (!f) {
+			ERROR("can't open /var/run/rstp.pid");
+			return -1;
+		}
 		openlog("rstpd", 0, LOG_DAEMON);
 		daemon(0, 0);
 		is_daemon = 1;
+		fprintf(f, "%d", getpid());
+		fclose(f);
 	}
 	return epoll_main_loop();
 }

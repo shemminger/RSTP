@@ -48,7 +48,7 @@
 
 static struct epoll_event_handler packet_event;
 
-#ifdef STP_DBG
+#ifdef PACKET_DEBUG
 static void dump_packet(const unsigned char *buf, int cc)
 {
 	int i, j;
@@ -76,14 +76,17 @@ void packet_send(int ifindex, const unsigned char *data, int len)
 		.sll_halen = ETH_ALEN,
 	};
 
-	memcpy(sl.sll_addr, data, ETH_ALEN);
+	memcpy(&sl.sll_addr, data, ETH_ALEN);
 
-#ifdef STP_DBG
-	printf("Send to %02x:%02x:%02x:%02x:%02x:%02x\n",
+#ifdef PACKET_DEBUG
+	printf("Transmit Dst index %d %02x:%02x:%02x:%02x:%02x:%02x\n",
+	       sl.sll_ifindex, 
 	       sl.sll_addr[0], sl.sll_addr[1], sl.sll_addr[2],
 	       sl.sll_addr[3], sl.sll_addr[4], sl.sll_addr[5]);
+
 	dump_packet(data, len);
 #endif
+
 	l = sendto(packet_event.fd, data, len, 0, 
 		   (struct sockaddr *) &sl, sizeof(sl));
 
@@ -101,16 +104,17 @@ static void packet_rcv(uint32_t events, struct epoll_event_handler *h)
 	struct sockaddr_ll sl;
 	socklen_t salen = sizeof sl;
 
-	cc = recvfrom(h->fd, &buf, sizeof(buf), 0,
-		      (struct sockaddr *) &sl, &salen);
+	cc = recvfrom(h->fd, &buf, sizeof(buf), 0, (struct sockaddr *) &sl, &salen);
 	if (cc <= 0) {
 		ERROR("recvfrom failed: %m");
 		return;
 	}
 
-#ifdef STP_DBG
-	printf("Receive Src %02x:%02x:%02x:%02x:%02x:%02x\n",
-	       buf[6], buf[7], buf[8], buf[9], buf[10], buf[11]);
+#ifdef PACKET_DEBUG
+	printf("Receive Src ifindex %d %02x:%02x:%02x:%02x:%02x:%02x\n",
+	       sl.sll_ifindex, 
+	       sl.sll_addr[0], sl.sll_addr[1], sl.sll_addr[2],
+	       sl.sll_addr[3], sl.sll_addr[4], sl.sll_addr[5]);
 
 	dump_packet(buf, cc);
 #endif

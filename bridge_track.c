@@ -383,12 +383,38 @@ void delete_if(struct ifdata *ifc)
 	free(ifc);
 }
 
+static int stp_enabled(struct ifdata *br)
+{
+	char path[40 + IFNAMSIZ];
+	sprintf(path, "/sys/class/net/%s/bridge/stp_state", br->name);
+	FILE *f = fopen(path, "r");
+	if (!f) {
+		LOG("Open %s failed", path);
+		return 0;
+	}
+	int enabled = 0;
+	fscanf(f, "%d", &enabled);
+	fclose(f);
+	INFO("STP on %s state %d", br->name, enabled);
+
+	return enabled == 2;	/* ie user mode STP */
+}
+
 void set_br_up(struct ifdata *br, int up)
 {
-	if (up != br->up) {
+	int stp_up = stp_enabled(br);
+	INFO("%s was %s stp was %s", br->name,up ? "up" : "down", br->stp_up ? "up" : "down");
+	INFO("Set bridge %s %s stp %s" , br->name,
+	     up ? "up" : "down", stp_up ? "up" : "down");
+
+	if (up != br->up)
 		br->up = up;
-		if (br->do_stp)
-			up ? (void)init_bridge_stp(br) : clear_bridge_stp(br);
+	
+	if (br->stp_up != stp_up) {
+		if (stp_up)
+			init_bridge_stp(br);
+		else 
+			clear_bridge_stp(br);
 	}
 }
 
@@ -545,23 +571,21 @@ int bridge_notify(int br_index, int if_index, int newlink, int up)
 void bridge_bpdu_rcv(int if_index, const unsigned char *data, int len)
 {
 	struct ifdata *ifc = find_if(if_index);
-	BPDU_T bpdu;
+	BPDU_T *bpdu = (BPDU_T *) (data + sizeof(MAC_HEADER_T));
 
 	LOG("ifindex %d, len %d", if_index, len);
 	if (!ifc)
 		return;
 
-	TST(ifc->up && ifc->master->stp_up,);
-
-	memset(&bpdu.eth, 0, sizeof(bpdu.eth));
-	if (len > sizeof(bpdu) - sizeof(bpdu.eth))
-		len = sizeof(bpdu) - sizeof(bpdu.eth);
-	memcpy(&bpdu.hdr, data, len);
+	TST(ifc->up,);
+	TST(ifc->master->stp_up,);
+	TST(len > sizeof(MAC_HEADER_T) + sizeof(ETH_HEADER_T) + sizeof(BPDU_HEADER_T),);
 
 	/* Do some validation */
-	TST(len >= 4,);
-	TST(bpdu.hdr.protocol[0] == 0 && bpdu.hdr.protocol[1] == 0,);
-	switch (bpdu.hdr.bpdu_type) {
+	if (bpdu->hdr.protocol[0] || bpdu->hdr.protocol[1])
+		return;
+
+	switch (bpdu->hdr.bpdu_type) {
 	case BPDU_RSTP:
 		TST(len >= 36,);
 	case BPDU_CONFIG_TYPE:
@@ -569,20 +593,20 @@ void bridge_bpdu_rcv(int if_index, const unsigned char *data, int len)
 		/* 802.1w doesn't ask for this */
 		//    TST(ntohs(*(uint16_t*)bpdu.body.message_age)
 		//        < ntohs(*(uint16_t*)bpdu.body.max_age), );
-		TST(memcmp(bpdu.body.bridge_id, &ifc->master->bridge_id, 8) != 0
-		    || (ntohs(*(uint16_t *) bpdu.body.port_id) & 0xfff) !=
+		TST(memcmp(bpdu->body.bridge_id, &ifc->master->bridge_id, 8) != 0
+		    || (ntohs(*(uint16_t *) bpdu->body.port_id) & 0xfff) !=
 		    ifc->port_index,);
 		break;
 	case BPDU_TOPO_CHANGE_TYPE:
 		break;
 	default:
-		TST(0,);
+		LOG("Receive unknown bpdu type %x", bpdu->hdr.bpdu_type);
+		return;
 	}
 
 	// dump_hex(data, len);
 	instance_begin(ifc->master);
-	int r =
-	    STP_IN_rx_bpdu(0, ifc->port_index, &bpdu, len + sizeof(bpdu.eth));
+	int r = STP_IN_rx_bpdu(0, ifc->port_index, bpdu, len);
 	if (r)
 		ERROR("STP_IN_rx_bpdu on port %s returned %s", ifc->name,
 		      STP_IN_get_error_explanation(r));
@@ -737,11 +761,10 @@ STP_OUT_tx_bpdu(IN int port_index, IN int vlan_id,
 	struct ifdata *port = find_port(port_index);
 	TST(port != NULL, 0);
 	TST(vlan_id == 0, 0);
-	//  dump_hex(bpdu + sizeof(MAC_HEADER_T) + sizeof(ETH_HEADER_T),
-	//           bpdu_len - (sizeof(MAC_HEADER_T) + sizeof(ETH_HEADER_T)));
-	packet_send(port->if_index, 
-		    bpdu + sizeof(MAC_HEADER_T) + sizeof(ETH_HEADER_T),
-		    bpdu_len);	// The length we get excludes headers!
+
+	packet_send(port->if_index, bpdu,
+		    bpdu_len + sizeof(ETH_HEADER_T)
+		    + sizeof(BPDU_HEADER_T) + sizeof(BPDU_BODY_T));
 	return 0;
 }
 
