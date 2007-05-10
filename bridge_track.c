@@ -763,8 +763,7 @@ STP_OUT_tx_bpdu(IN int port_index, IN int vlan_id,
 	TST(vlan_id == 0, 0);
 
 	packet_send(port->if_index, bpdu,
-		    bpdu_len + sizeof(ETH_HEADER_T)
-		    + sizeof(BPDU_HEADER_T) + sizeof(BPDU_BODY_T));
+		    bpdu_len + sizeof(MAC_HEADER_T) + sizeof(ETH_HEADER_T));
 	return 0;
 }
 
