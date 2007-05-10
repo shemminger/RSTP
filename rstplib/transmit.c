@@ -99,11 +99,7 @@ build_bpdu_header (int port_index,
 {
   unsigned short len8023;
 
-#ifdef ORIG
   STP_OUT_get_port_mac (port_index, bpdu_packet.mac.src_mac);
-#else
-  /* Don't bother. LLC trasmits with correct source MAC, we don't supply it */
-#endif
 
   bpdu_packet.hdr.bpdu_type = bpdu_type;
   bpdu_packet.hdr.version = (BPDU_RSTP == bpdu_type) ?
