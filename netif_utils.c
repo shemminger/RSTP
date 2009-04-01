@@ -32,6 +32,7 @@
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
+#include <limits.h>
 
 #include <net/if.h>
 #include <linux/if_ether.h>

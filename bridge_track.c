@@ -386,6 +386,7 @@ void delete_if(struct ifdata *ifc)
 static int stp_enabled(struct ifdata *br)
 {
 	char path[40 + IFNAMSIZ];
+	int ret;
 	sprintf(path, "/sys/class/net/%s/bridge/stp_state", br->name);
 	FILE *f = fopen(path, "r");
 	if (!f) {
@@ -393,7 +394,11 @@ static int stp_enabled(struct ifdata *br)
 		return 0;
 	}
 	int enabled = 0;
-	fscanf(f, "%d", &enabled);
+	ret = fscanf(f, "%d", &enabled);
+	if (!ret) {
+		LOG("%s, stp_state parsing error", path);
+		return 0;
+	}
 	fclose(f);
 	INFO("STP on %s state %d", br->name, enabled);
 

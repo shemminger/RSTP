@@ -42,7 +42,7 @@ int log_level = LOG_LEVEL_DEFAULT;
 
 int main(int argc, char *argv[])
 {
-	int c;
+	int c,ret;
 	while ((c = getopt(argc, argv, "dv:")) != -1) {
 		switch (c) {
 		case 'd':
@@ -78,7 +78,11 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 		openlog("rstpd", 0, LOG_DAEMON);
-		daemon(0, 0);
+		ret = daemon(0, 0);
+		if (ret) {
+			ERROR("daemon() failed");
+			return -1;		    
+		}
 		is_daemon = 1;
 		fprintf(f, "%d", getpid());
 		fclose(f);
