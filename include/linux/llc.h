@@ -49,9 +49,9 @@ enum llc_sockopts {
 
 /* LLC SAP types. */
 #define LLC_SAP_NULL	0x00		/* NULL SAP. 			*/
-#define LLC_SAP_LLC	0x02		/* LLC Sublayer Managment. 	*/
+#define LLC_SAP_LLC	0x02		/* LLC Sublayer Management. 	*/
 #define LLC_SAP_SNA	0x04		/* SNA Path Control. 		*/
-#define LLC_SAP_PNM	0x0E		/* Proway Network Managment.	*/	
+#define LLC_SAP_PNM	0x0E		/* Proway Network Management.	*/	
 #define LLC_SAP_IP	0x06		/* TCP/IP. 			*/
 #define LLC_SAP_BSPAN	0x42		/* Bridge Spanning Tree Proto	*/
 #define LLC_SAP_MMS	0x4E		/* Manufacturing Message Srv.	*/
@@ -70,11 +70,4 @@ enum llc_sockopts {
 #define LLC_SAP_RM	0xD4		/* Resource Management 		*/
 #define LLC_SAP_GLOBAL	0xFF		/* Global SAP. 			*/
 
-#ifdef __KERNEL__
-#define LLC_SAP_DYN_START	0xC0
-#define LLC_SAP_DYN_STOP	0xDE
-#define LLC_SAP_DYN_TRIES	4
-
-#define llc_ui_skb_cb(__skb) ((struct sockaddr_llc *)&((__skb)->cb[0]))
-#endif /* __KERNEL__ */
 #endif /* __LINUX_LLC_H */
