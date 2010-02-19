@@ -53,9 +53,9 @@ start() {
 case $2 in
      start) 
 	daemon
-	exec /sbin/rstpctl $bridge on ;;
+	exec /sbin/rstpctl rstp $bridge on ;;
      stop)  
-	exec /sbin/rstpctl $bridge off ;;
+	exec /sbin/rstpctl rstp $bridge off ;;
      *)
      	echo "Unknown action:" $2
 	echo "Usage: bridge-stp <bridge> {start|stop}"
