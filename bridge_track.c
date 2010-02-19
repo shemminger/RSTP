@@ -579,7 +579,7 @@ void bridge_bpdu_rcv(int if_index, const unsigned char *data, int len)
 	BPDU_T *bpdu = (BPDU_T *) (data + sizeof(MAC_HEADER_T));
 
 	LOG("ifindex %d, len %d", if_index, len);
-	if (!ifc)
+	if (!ifc || !ifc->master)
 		return;
 
 	TST(ifc->up,);
