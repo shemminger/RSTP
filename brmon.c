@@ -75,14 +75,6 @@ static int dump_msg(const struct sockaddr_nl *who, struct nlmsghdr *n,
           return -1;
         }
         
-#if 0
-
-	if (filter.ifindex && ifi->ifi_index != filter.ifindex)
-		return 0;
-
-	if (filter.up && !(ifi->ifi_flags&IFF_UP))
-		return 0;
-#endif
         if (ifi->ifi_family != AF_BRIDGE && ifi->ifi_family != AF_UNSPEC)
           return 0;
 
