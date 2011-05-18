@@ -30,32 +30,10 @@
 
 static const char SNAPSHOT[] = "v0.1";
 
-
-/* RFC 2863 operational status */
-enum {
-	IF_OPER_UNKNOWN,
-	IF_OPER_NOTPRESENT,
-	IF_OPER_DOWN,
-	IF_OPER_LOWERLAYERDOWN,
-	IF_OPER_TESTING,
-	IF_OPER_DORMANT,
-	IF_OPER_UP,
-};
-
-/* link modes */
-enum {
-	IF_LINK_MODE_DEFAULT,
-	IF_LINK_MODE_DORMANT,	/* limit upward transition to dormant */
-};
-
-static const char *port_states[] = {
-	[BR_STATE_DISABLED] = "disabled",
-	[BR_STATE_LISTENING] = "listening",
-	[BR_STATE_LEARNING] = "learning",
-	[BR_STATE_FORWARDING] = "forwarding",
-	[BR_STATE_BLOCKING] = "blocking",
-};
-
+static int is_up(const struct ifinfomsg *ifi)
+{
+	return (ifi->ifi_flags & IFF_UP) && (ifi->ifi_flags & IFF_RUNNING);
+}
 
 static int dump_msg(const struct sockaddr_nl *who, struct nlmsghdr *n,
 		    void *arg)
@@ -64,17 +42,16 @@ static int dump_msg(const struct sockaddr_nl *who, struct nlmsghdr *n,
 	struct ifinfomsg *ifi = NLMSG_DATA(n);
 	struct rtattr * tb[IFLA_MAX+1];
 	int len = n->nlmsg_len;
+	int master = -1;
 	char b1[IFNAMSIZ];
-	int af_family = ifi->ifi_family;
 
         if (n->nlmsg_type == NLMSG_DONE)
           return 0;
-        
+
 	len -= NLMSG_LENGTH(sizeof(*ifi));
-	if (len < 0) {
+	if (len < 0)
           return -1;
-        }
-        
+
         if (ifi->ifi_family != AF_BRIDGE && ifi->ifi_family != AF_UNSPEC)
           return 0;
 
@@ -85,73 +62,41 @@ static int dump_msg(const struct sockaddr_nl *who, struct nlmsghdr *n,
 	parse_rtattr(tb, IFLA_MAX, IFLA_RTA(ifi), len);
 
         /* Check if we got this from bonding */
-        if (tb[IFLA_MASTER] && af_family != AF_BRIDGE)
-          return 0;
+        if (tb[IFLA_MASTER] && ifi->ifi_family != AF_BRIDGE)
+           return 0;
+
+	/* Check if hearing our own state changes */
+	if (n->nlmsg_type == RTM_NEWLINK && tb[IFLA_PROTINFO]) {
+	   uint8_t state = *(uint8_t *)RTA_DATA(tb[IFLA_PROTINFO]);
+
+	   if (state != BR_STATE_DISABLED)
+	      return 0;
+	}
 
 	if (tb[IFLA_IFNAME] == NULL) {
-		fprintf(stderr, "BUG: nil ifname\n");
-		return -1;
+	   fprintf(stderr, "BUG: nil ifname\n");
+	   return -1;
 	}
 
 	if (n->nlmsg_type == RTM_DELLINK)
-		fprintf(fp, "Deleted ");
+	   fprintf(fp, "Deleted ");
 
 	fprintf(fp, "%d: %s ", ifi->ifi_index,
-		tb[IFLA_IFNAME] ? (char*)RTA_DATA(tb[IFLA_IFNAME]) : "<nil>");
-
-
-	if (tb[IFLA_OPERSTATE]) {
-		int state = *(int*)RTA_DATA(tb[IFLA_OPERSTATE]);
-		switch (state) {
-		case IF_OPER_UNKNOWN: 
-			fprintf(fp, "Unknown "); break;
-		case IF_OPER_NOTPRESENT:
-			fprintf(fp, "Not Present "); break;
-		case IF_OPER_DOWN:
-			fprintf(fp, "Down "); break;
-		case IF_OPER_LOWERLAYERDOWN:
-			fprintf(fp, "Lowerlayerdown "); break;
-		case IF_OPER_TESTING:
-			fprintf(fp, "Testing "); break;
-		case IF_OPER_DORMANT:
-			fprintf(fp, "Dormant "); break;
-		case IF_OPER_UP:
-			fprintf(fp, "Up "); break;
-		default:
-			fprintf(fp, "State(%d) ", state);
-		}
-	}
-	
-	if (tb[IFLA_MTU])
-		fprintf(fp, "mtu %u ", *(int*)RTA_DATA(tb[IFLA_MTU]));
+		(const char*)RTA_DATA(tb[IFLA_IFNAME]));
 
 	if (tb[IFLA_MASTER]) {
-		fprintf(fp, "master %s ", 
-			if_indextoname(*(int*)RTA_DATA(tb[IFLA_MASTER]), b1));
+	   master = *(int*)RTA_DATA(tb[IFLA_MASTER]);
+	   fprintf(fp, "master %s ", if_indextoname(master, b1));
 	}
-
-	if (tb[IFLA_PROTINFO]) {
-		uint8_t state = *(uint8_t *)RTA_DATA(tb[IFLA_PROTINFO]);
-		if (state <= BR_STATE_BLOCKING)
-			fprintf(fp, "state %s", port_states[state]);
-		else
-			fprintf(fp, "state (%d)", state);
-	}
-
 
 	fprintf(fp, "\n");
 	fflush(fp);
-        {
-          int newlink = (n->nlmsg_type == RTM_NEWLINK);
-          int up = 0;
-          if (newlink && tb[IFLA_OPERSTATE]) {
-            int state = *(int*)RTA_DATA(tb[IFLA_OPERSTATE]);
-            up = (state == IF_OPER_UP) || (state == IF_OPER_UNKNOWN);
-          }
 
-          bridge_notify((tb[IFLA_MASTER]?*(int*)RTA_DATA(tb[IFLA_MASTER]):-1), 
-                        ifi->ifi_index, newlink, up);
-        }
+
+	bridge_notify(master, ifi->ifi_index,
+		      (n->nlmsg_type == RTM_NEWLINK),
+		      is_up(ifi));
+
 	return 0;
 }
 
@@ -244,7 +189,7 @@ int init_bridge_ops(void)
     fprintf(stderr, "Couldn't open rtnl socket for monitoring\n");
     return -1;
   }
-  
+
   if (rtnl_open(&rth_state, 0) < 0) {
     fprintf(stderr, "Couldn't open rtnl socket for setting state\n");
     return -1;
@@ -254,7 +199,7 @@ int init_bridge_ops(void)
     fprintf(stderr, "Cannot send dump request: %m\n");
     return -1;
   }
-  
+
   if (rtnl_dump_filter(&rth, dump_msg, stdout, NULL, NULL) < 0) {
     fprintf(stderr, "Dump terminated\n");
     return -1;
@@ -268,10 +213,10 @@ int init_bridge_ops(void)
   br_handler.fd = rth.fd;
   br_handler.arg = NULL;
   br_handler.handler = br_ev_handler;
-  
+
   if (add_epoll(&br_handler) < 0)
     return -1;
-  
+
   return 0;
 }
 
