@@ -14,7 +14,7 @@ if [ $# -ne 2 ]; then
 fi
 bridge=$1
 service=rstpd
-pid_file=/var/run/${servicename}.pid
+pid_file=/var/run/${service}.pid
 
 # Set $pid to pids from /var/run* for {program}.  $pid should be declared
 # local in the caller.
