@@ -476,13 +476,14 @@ static void set_if_up(struct ifdata *ifc, int up)
 
 /*------------------------------------------------------------*/
 
-int bridge_notify(int br_index, int if_index, int newlink, int up)
+int bridge_notify(int br_index, int if_index, int newlink, 
+		  unsigned flags)
 {
-	if (up)
-		up = 1;
-	LOG("br_index %d, if_index %d, up %d", br_index, if_index, up);
-
 	struct ifdata *br = NULL;
+
+	LOG("br_index %d, if_index %d, up %d running %d",
+	    br_index, if_index, (flags & IFF_UP), flags & IFF_RUNNING);
+
 	if (br_index >= 0) {
 		br = find_if(br_index);
 		if (br && !br->is_bridge) {
@@ -536,6 +537,8 @@ int bridge_notify(int br_index, int if_index, int newlink, int up)
 			delete_if(ifc);
 			return 0;
 		}
+		int up = (flags & (IFF_UP|IFF_RUNNING)) == (IFF_UP|IFF_RUNNING);
+
 		if (ifc->up != up)
 			set_if_up(ifc, up);	/* And speed and duplex */
 	} else {		/* No br_index */
@@ -565,11 +568,18 @@ int bridge_notify(int br_index, int if_index, int newlink, int up)
 				delete_if(ifc);
 				return 0;
 			}
-			if (ifc && ifc->up != up) {
-				if (ifc->is_bridge)
-					set_br_up(ifc, up);
-				else
-					set_if_up(ifc, up);
+
+			if (ifc) {
+				if (ifc->is_bridge) {
+					int up = (flags & IFF_UP) != 0;
+					if (ifc->up != up)
+						set_br_up(ifc, up);
+				} else {
+					int up = (flags & (IFF_UP|IFF_RUNNING)) == (IFF_UP|IFF_RUNNING);
+
+					if (ifc->up != up)
+						set_if_up(ifc, up);
+				}
 			}
 		}
 	}

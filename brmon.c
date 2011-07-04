@@ -30,11 +30,6 @@
 
 static const char SNAPSHOT[] = "v0.1";
 
-static int is_up(const struct ifinfomsg *ifi)
-{
-	return (ifi->ifi_flags & IFF_UP) && (ifi->ifi_flags & IFF_RUNNING);
-}
-
 static int dump_msg(const struct sockaddr_nl *who, struct nlmsghdr *n,
 		    void *arg)
 {
@@ -95,7 +90,7 @@ static int dump_msg(const struct sockaddr_nl *who, struct nlmsghdr *n,
 
 	bridge_notify(master, ifi->ifi_index,
 		      (n->nlmsg_type == RTM_NEWLINK),
-		      is_up(ifi));
+		      ifi->ifi_flags);
 
 	return 0;
 }
