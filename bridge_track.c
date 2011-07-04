@@ -405,12 +405,15 @@ static int stp_enabled(struct ifdata *br)
 	return enabled == 2;	/* ie user mode STP */
 }
 
-void set_br_up(struct ifdata *br, int up)
+static void set_br_up(struct ifdata *br, int up)
 {
 	int stp_up = stp_enabled(br);
-	INFO("%s was %s stp was %s", br->name,up ? "up" : "down", br->stp_up ? "up" : "down");
+	INFO("%s was %s stp was %s", br->name,
+	     up ? "up" : "down", 
+	     br->stp_up ? "up" : "down");
 	INFO("Set bridge %s %s stp %s" , br->name,
-	     up ? "up" : "down", stp_up ? "up" : "down");
+	     up ? "up" : "down", 
+	     stp_up ? "up" : "down");
 
 	if (up != br->up)
 		br->up = up;
@@ -423,7 +426,7 @@ void set_br_up(struct ifdata *br, int up)
 	}
 }
 
-void set_if_up(struct ifdata *ifc, int up)
+static void set_if_up(struct ifdata *ifc, int up)
 {
 	INFO("Port %s : %s", ifc->name, (up ? "up" : "down"));
 	int speed = -1;
