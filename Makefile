@@ -34,6 +34,7 @@ install: all
 	install -m 755 -d $(INSTALLPREFIX)/sbin
 	install -m 755 rstpd $(INSTALLPREFIX)/sbin
 	install -m 755 rstpctl $(INSTALLPREFIX)/sbin
+	install -m 755 bridge-stp $(INSTALLPREFIX)/sbin
 	install -m 755 -d $(INSTALLPREFIX)/usr/share/man/man8
 	install -m 644 rstpd.8 $(INSTALLPREFIX)/usr/share/man/man8
 	install -m 644 rstpctl.8 $(INSTALLPREFIX)/usr/share/man/man8
